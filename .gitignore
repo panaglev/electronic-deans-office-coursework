@@ -1,1 +1,4 @@
 venv
+database.db
+instance
+__pycache__
