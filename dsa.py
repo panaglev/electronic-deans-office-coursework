@@ -33,12 +33,3 @@ def verify_signature(message, signature, public_key):
         return True
     except ValueError:
         return False
-
-if __name__ == "__main__":
-    public_key, private_key = generate_keys()
-    
-    message = b"Hello, world!"
-    signature = sign_message(message, private_key)
-    
-    is_valid = verify_signature(message, signature, public_key)
-    print("Signature is valid:", is_valid)
