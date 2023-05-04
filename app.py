@@ -1,11 +1,14 @@
-from flask import Flask, render_template, request, redirect, session, url_for
-from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
+import os
 import dsa
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Flask, render_template, request, redirect, session, url_for
 
 
 app = Flask(__name__)
 app.secret_key = 'noonewil2#WC3leverEQ@*uknowwQ@&Y$fhatisthe@*uen[390ripsecretkey'
+app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'downloads')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 db = SQLAlchemy(app)
 
@@ -114,6 +117,16 @@ def profile(user_id):
                            public_key=user.public_key,
                            status=user.status)
 
+@app.route('/upload')
+def upload_file():
+   return render_template('upload.html')
+	
+@app.route('/uploader', methods = ['GET', 'POST'])
+def uploader_file():
+   if request.method == 'POST':
+      f = request.files['file']
+      f.save(secure_filename(f.filename))
+      return 'file uploaded successfully'
 
 @app.route('/works', methods=['GET', 'POST'])
 def works():
