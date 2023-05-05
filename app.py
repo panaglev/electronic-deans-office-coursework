@@ -31,7 +31,6 @@ def jwt_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         token = request.cookies.get("token")
-        print(f"Here's token: {token}")
         if not token:
             abort(401, description='Missing token')
         try:
@@ -52,7 +51,7 @@ def register():
     # Если GET, то проверяем авторизован ли пользователь
     # Если да, то посылаем его куда подальше, но в нашем случае на его личную страницу
     # Если нет, то ничего не делаем, просто показываем страницу с регой
-    if request.metgod == 'GET':
+    if request.method == 'GET':
         # Получение токена из куки
         token = request.cookies.get("token")
 
@@ -84,7 +83,7 @@ def register():
         if user:
             return render_template('register.html', error='This username already registered')
 
-        # Создание нового пользователя и добавление его в базу данных
+       # Создание нового пользователя и добавление его в базу данных
         new_user = User(first_name=first_name,
                         last_name=last_name,
                         username=username,
@@ -96,19 +95,28 @@ def register():
         db.session.add(new_user)
         db.session.commit()
 
-        # Сохранение имени пользователя в сессии
-        session['user'] = username
-
         # Костыль, может можно было сделать лучше, но я не гений, не я гений, но не в этом
         user = User.query.filter_by(username=username).first()
 
-        # Перенаправление пользователя на его домашнюю страницу
-        return redirect(url_for('profile', user_id = user.id,
-                                first_name=new_user.first_name,
-                                last_name=new_user.last_name,
-                                department=new_user.department,
-                                public_key=new_user.public_key,
-                                status=new_user.status))
+        # Создание нагрузки которая войдет в жэвэтэ токен 
+        payload = {
+            'username': user.username,
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
+            }
+        secret_key = 'SECRET' # os.environ.get('SECRET')
+
+        # Создание токена
+        token = jwt.encode(payload, secret_key, algorithm='HS256')
+
+        # Создание ответа с перенаправлением на страницу пользователя и установкой токена в куку
+        response = make_response(redirect(url_for('profile', user_id=user.id,
+                                first_name=user.first_name,
+                                last_name=user.last_name,
+                                department=user.department,
+                                public_key=user.public_key,
+                                status=user.status)))
+        response.set_cookie('token', f'{token}')
+        return response
 
     return render_template('register.html')
 
@@ -134,9 +142,6 @@ def login():
 
     # Если запрос POST, то собираем все данные из форм, проверяем пользователя и создаем ему токен в куке(если все успешно)
     if request.method == 'POST':
-        # Получение токена из куки
-        token = request.cookies.get("token")
-
         # Получение данных с форм
         username = request.form['username']
         password = request.form['password']
@@ -148,15 +153,11 @@ def login():
         if not user or not check_password_hash(user.password, password):
             return render_template('login.html', error='Invalid username or password')
 
-        # Сохранение имени пользователя в сессии
-        session['user'] = username
-
-        # Костыль, может можно было сделать лучше, но я не гений, не я гений, но не в этом
+        # Костыль, может можно было сделать лучше, но я не гений, не, я гений, но не в этом
         user = User.query.filter_by(username=username).first()
 
         # Создание нагрузки которая войдет в жэвэтэ токен 
         payload = {
-            'id': user.id,
             'username': user.username,
             'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
             }
