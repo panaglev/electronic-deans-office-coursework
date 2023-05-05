@@ -31,6 +31,7 @@ def jwt_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         token = request.cookies.get("token")
+        print(f"Here's token: {token}")
         if not token:
             abort(401, description='Missing token')
         try:
@@ -46,14 +47,34 @@ def main():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    # При переходе на страницу регистрации надо посмотреть по какому методу 
+    # Был произведен заход на страницу
+    # Если GET, то проверяем авторизован ли пользователь
+    # Если да, то посылаем его куда подальше, но в нашем случае на его личную страницу
+    # Если нет, то ничего не делаем, просто показываем страницу с регой
+    if request.metgod == 'GET':
+        # Получение токена из куки
+        token = request.cookies.get("token")
+
+        # Вылавливаем момент с активной сессией
+        if token != None:
+            data = jwt.decode(token, 'SECRET', "HS256")
+            user = User.query.filter_by(username=data['username']).first()
+            return make_response(redirect(url_for('profile', user_id=user.id,
+                                    first_name=user.first_name,
+                                    last_name=user.last_name,
+                                    department=user.department,
+                                    public_key=user.public_key,
+                                    status=user.status)))
+    # Если запрос пост, то регистрируем пользователя 
     if request.method == 'POST':
         # Получение данных с форм
         first_name = request.form['first_name']
         last_name = request.form['last_name']
         username = request.form['username']
         password = request.form['password']
-        department = request.form['department']
-        status = request.form['status']
+        department = request.form['department'] # Точно так же как и статус
+        status = request.form['status'] # Сделать отдельной таблицей в бд и выпадающее меню
 
         # Генерация ключей с помощью нашего класса
         public_key, private_key = dsa.generate_keys()
@@ -93,7 +114,29 @@ def register():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # Если запрос GET, то надо узнать, авторизирован ли пользователь или нет
+    # Если авторизирован, то кинуть на домашнюю страницу
+    # В противном случае показать страницу авторизации 
+    if request.method == "GET":
+        # Получение токена из куки
+        token = request.cookies.get("token")
+
+        # Вылавливаем момент с активной сессией
+        if token != None:
+            data = jwt.decode(token, 'SECRET', "HS256")
+            user = User.query.filter_by(username=data['username']).first()
+            return make_response(redirect(url_for('profile', user_id=user.id,
+                                    first_name=user.first_name,
+                                    last_name=user.last_name,
+                                    department=user.department,
+                                    public_key=user.public_key,
+                                    status=user.status)))
+
+    # Если запрос POST, то собираем все данные из форм, проверяем пользователя и создаем ему токен в куке(если все успешно)
     if request.method == 'POST':
+        # Получение токена из куки
+        token = request.cookies.get("token")
+
         # Получение данных с форм
         username = request.form['username']
         password = request.form['password']
