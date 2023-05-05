@@ -1,9 +1,13 @@
 import os
 import dsa
+import jwt
+import datetime
+import subprocess
+from functools import wraps
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask import Flask, render_template, request, redirect, session, url_for
+from flask import Flask, render_template, request, redirect, session, url_for, abort, make_response
 
 
 app = Flask(__name__)
@@ -22,6 +26,19 @@ class User(db.Model):
     public_key = db.Column(db.String, unique=True, nullable=False)
     private_key = db.Column(db.String, nullable=False)
     status = db.Column(db.String, nullable=False)
+
+def jwt_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        token = request.cookies.get("token")
+        if not token:
+            abort(401, description='Missing token')
+        try:
+            data = jwt.decode(token, 'SECRET', algorithms=['HS256'])
+        except jwt.InvalidTokenError:
+            abort(401, description='Invalid token')
+        return func(*args, **kwargs)
+    return wrapper
 
 @app.route('/')
 def main():
@@ -94,13 +111,26 @@ def login():
         # Костыль, может можно было сделать лучше, но я не гений, не я гений, но не в этом
         user = User.query.filter_by(username=username).first()
 
-        # Перенаправление пользователя на домашнюю страницу
-        return redirect(url_for('profile', user_id=user.id,
+        # Создание нагрузки которая войдет в жэвэтэ токен 
+        payload = {
+            'id': user.id,
+            'username': user.username,
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
+            }
+        secret_key = 'SECRET' # os.environ.get('SECRET')
+        
+        # Создание токена
+        token = jwt.encode(payload, secret_key, algorithm='HS256')
+
+        # Создание ответа с перенаправлением на страницу пользователя и установкой токена в куку
+        response = make_response(redirect(url_for('profile', user_id=user.id,
                                 first_name=user.first_name,
                                 last_name=user.last_name,
                                 department=user.department,
                                 public_key=user.public_key,
-                                status=user.status))
+                                status=user.status)))
+        response.set_cookie('token', f'{token}')
+        return response
 
     return render_template('login.html')
 
@@ -118,25 +148,48 @@ def profile(user_id):
                            status=user.status)
 
 @app.route('/upload')
+# Жэвэтэ токен который не пущает на сайт неавторизованного пользователя
+@jwt_required
 def upload_file():
+   # Просто возвращает страницу, на которой происходит загрузка файла 
    return render_template('upload.html')
 	
-@app.route('/uploader', methods = ['GET', 'POST'])
+@app.route('/uploader', methods = ['POST'])
+# Жэвэтэ токен который не пущает на сайт неавторизованного пользователя
+@jwt_required
 def uploader_file():
-   if request.method == 'POST':
-      f = request.files['file']
-      f.save(secure_filename(f.filename))
-      return 'file uploaded successfully'
+    # Получает токен из куки
+    token = request.cookies.get("token")
+    
+    # Декодирование жэвэтэ токена
+    data = jwt.decode(token, 'SECRET', "HS256")
+    
+    # Получение из запроса фалйа и его проверка 
+    f = request.files['file']
+    filename = secure_filename(f.filename)
 
-@app.route('/works', methods=['GET', 'POST'])
-def works():
-    if request.method == 'GET':
-        return 'Here are the works'
-    elif request.method == 'POST':
-        work_name = request.form['work_name']
-        return f'Added work: {work_name}'
+    # Логика такова, если у пользователя нету его личной папки с файлами, то она создается и потом туда сгружается файл
+    try:
+        # Проверка наличия папки пользователя заливающего файл
+        result = subprocess.check_output(f"ls downloads | grep {data['username']}", stderr=subprocess.STDOUT)
+    except FileNotFoundError:
+        # Создание папки если ее нету
+        os.system(f"mkdir downloads/{data['username']}")
+    finally:
+        # Загрузка файла 
+        filepath = os.path.join(app.config['UPLOAD_FOLDER']+f"/{data['username']}", filename)
+        f.save(filepath)
+    return 'file uploaded successfully'
+
+#@app.route('/works', methods=['GET', 'POST'])
+#def works():
+#    if request.method == 'GET':
+#        return 'Here are the works'
+#    elif request.method == 'POST':
+#        work_name = request.form['work_name']
+#        return f'Added work: {work_name}'
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(host='0.0.0.0', port=5000)
+    app.run()
