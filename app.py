@@ -25,7 +25,7 @@ class User(db.Model):
     department = db.Column(db.String, nullable=False)
     public_key = db.Column(db.String, unique=True, nullable=False)
     private_key = db.Column(db.String, nullable=False)
-    status = db.Column(db.String, nullable=False)
+    role = db.Column(db.String, nullable=False)
 
 def jwt_required(func):
     @wraps(func)
@@ -64,7 +64,7 @@ def register():
                                     last_name=user.last_name,
                                     department=user.department,
                                     public_key=user.public_key,
-                                    status=user.status)))
+                                    role=user.role)))
     # Если запрос пост, то регистрируем пользователя 
     if request.method == 'POST':
         # Получение данных с форм
@@ -72,8 +72,7 @@ def register():
         last_name = request.form['last_name']
         username = request.form['username']
         password = request.form['password']
-        department = request.form['department'] # Точно так же как и статус
-        status = request.form['status'] # Сделать отдельной таблицей в бд и выпадающее меню
+        department = request.form['department']
 
         # Генерация ключей с помощью нашего класса
         public_key, private_key = dsa.generate_keys()
@@ -91,7 +90,7 @@ def register():
                         department=department,
                         public_key=public_key,
                         private_key=private_key,
-                        status=status)
+                        role="Student")
         db.session.add(new_user)
         db.session.commit()
 
@@ -114,7 +113,7 @@ def register():
                                 last_name=user.last_name,
                                 department=user.department,
                                 public_key=user.public_key,
-                                status=user.status)))
+                                role=user.role)))
         response.set_cookie('token', f'{token}')
         return response
 
@@ -138,7 +137,7 @@ def login():
                                     last_name=user.last_name,
                                     department=user.department,
                                     public_key=user.public_key,
-                                    status=user.status)))
+                                    role=user.role)))
 
     # Если запрос POST, то собираем все данные из форм, проверяем пользователя и создаем ему токен в куке(если все успешно)
     if request.method == 'POST':
@@ -172,7 +171,7 @@ def login():
                                 last_name=user.last_name,
                                 department=user.department,
                                 public_key=user.public_key,
-                                status=user.status)))
+                                role=user.role)))
         response.set_cookie('token', f'{token}')
         return response
 
@@ -189,7 +188,7 @@ def profile(user_id):
                            last_name=user.last_name,
                            department=user.department,
                            public_key=user.public_key,
-                           status=user.status)
+                           role=user.role)
 
 @app.route('/upload')
 # Жэвэтэ токен который не пущает на сайт неавторизованного пользователя
@@ -225,13 +224,19 @@ def uploader_file():
         f.save(filepath)
     return 'file uploaded successfully'
 
-#@app.route('/works', methods=['GET', 'POST'])
-#def works():
-#    if request.method == 'GET':
-#        return 'Here are the works'
-#    elif request.method == 'POST':
-#        work_name = request.form['work_name']
-#        return f'Added work: {work_name}'
+@app.route('/works', methods=['GET', 'POST'])
+def works():
+    table_data = [
+        {'name': 'Alice', 'age': 25, 'city': 'New York'},
+        {'name': 'Bob', 'age': 30, 'city': 'Los Angeles'},
+        {'name': 'Charlie', 'age': 35, 'city': 'Chicago'},
+    ]
+    return render_template('works.html', table_data=table_data)
+    #if request.method == 'GET':
+    #    return 'Here are the works'
+    #elif request.method == 'POST':
+    #    work_name = request.form['work_name']
+    #    return f'Added work: {work_name}'
 
 if __name__ == '__main__':
     with app.app_context():
