@@ -156,7 +156,17 @@ def login():
         if token != None:
             data = jwt.decode(token, 'SECRET', "HS256")
             user = User.query.filter_by(username=data['username']).first()
-            return make_response(redirect(url_for('profile', user_id=user.id,
+            if user.role == "Dickunat":
+                works = Work.query.filter_by(approved="No").all()
+                return make_response(redirect(url_for('profile', user_id=user.id,
+                                    first_name=user.first_name,
+                                    last_name=user.last_name,
+                                    department=user.department,
+                                    public_key=user.public_key,
+                                    role=user.role,
+                                    works=works)))
+            else:
+                return make_response(redirect(url_for('profile', user_id=user.id,
                                     first_name=user.first_name,
                                     last_name=user.last_name,
                                     department=user.department,
@@ -189,16 +199,26 @@ def login():
         # Создание токена
         token = jwt.encode(payload, secret_key, algorithm='HS256')
 
-        # Создание ответа с перенаправлением на страницу пользователя и установкой токена в куку
-        response = make_response(redirect(url_for('profile', user_id=user.id,
+        if user.role == "Dickunat":
+            works = Work.query.filter_by(approved="No").all()
+            response = make_response(redirect(url_for('profile', user_id=user.id,
+                                first_name=user.first_name,
+                                last_name=user.last_name,
+                                department=user.department,
+                                public_key=user.public_key,
+                                role=user.role,
+                                works=works)))
+            response.set_cookie('token', f'{token}')
+            return response
+        else:
+            response = make_response(redirect(url_for('profile', user_id=user.id,
                                 first_name=user.first_name,
                                 last_name=user.last_name,
                                 department=user.department,
                                 public_key=user.public_key,
                                 role=user.role)))
-        response.set_cookie('token', f'{token}')
-        return response
-
+            response.set_cookie('token', f'{token}')
+            return response
     return render_template('login.html')
 
 @app.route('/profile/<user_id>')
@@ -206,7 +226,10 @@ def profile(user_id):
     # Получение пользователя по его айди
     user = User.query.filter_by(id=user_id).first()
 
-    works = Work.query.filter_by(user_id=user_id).all()
+    documents = Work.query.filter_by(user_id=user_id).all()
+
+
+    works = Work.query.filter_by(approved="No").all()
 
     # Рендер шаблона и передача в него информации 
     return render_template('profile.html',
@@ -216,7 +239,8 @@ def profile(user_id):
                            department=user.department,
                            public_key=user.public_key,
                            role=user.role,
-                           documents=works)
+                           documents=documents,
+                           works=works)
 
 @app.route('/upload')
 # Жэвэтэ токен который не пущает на сайт неавторизованного пользователя

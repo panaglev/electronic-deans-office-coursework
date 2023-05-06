@@ -54,6 +54,27 @@
     <p>No approved documents found.</p>
     {% endif %}
 
+    {% if role == "Dickunat" %}
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>User ID</th>
+                <th>Work Name</th>
+                <th>Base Hash</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for work in works %}
+            <tr>
+                <td>{{ work.user_id }}</td>
+                <td>{{ work.work_name }}</td>
+                <td>{{ work.base_hash }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
 
 </body>
 
