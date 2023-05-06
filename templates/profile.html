@@ -69,6 +69,10 @@
                 <td>{{ work.user_id }}</td>
                 <td>{{ work.work_name }}</td>
                 <td>{{ work.base_hash }}</td>
+                <td>
+                    <a href="{{ url_for('approve_work', username=username, work_name=work.work_name) }}"
+                        class="btn btn-primary">Approve</a>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
