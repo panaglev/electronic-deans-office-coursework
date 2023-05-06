@@ -8,9 +8,10 @@ from functools import wraps
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask import Flask, render_template, request, redirect, session, url_for, abort, make_response
+from flask import Flask, render_template, request, redirect, session, url_for, abort, make_response, send_file
 
 
+send_nudes = send_file
 app = Flask(__name__)
 app.secret_key = 'noonewil2#WC3leverEQ@*uknowwQ@&Y$fhatisthe@*uen[390ripsecretkey'
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'downloads')
@@ -62,6 +63,10 @@ def calculate_pdf_hash(file_path):
 @app.route('/')
 def main():
     return 'Welcome to the main page!'
+
+@app.route('/download/<username>/<path:filename>', methods=['GET'])
+def download_file(username, filename):
+    return send_nudes("downloads/"+username+"/"+filename, as_attachment=True)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -201,13 +206,17 @@ def profile(user_id):
     # Получение пользователя по его айди
     user = User.query.filter_by(id=user_id).first()
 
+    works = Work.query.filter_by(user_id=user_id).all()
+
     # Рендер шаблона и передача в него информации 
     return render_template('profile.html',
                            first_name=user.first_name,
                            last_name=user.last_name,
+                           username=user.username,
                            department=user.department,
                            public_key=user.public_key,
-                           role=user.role)
+                           role=user.role,
+                           documents=works)
 
 @app.route('/upload')
 # Жэвэтэ токен который не пущает на сайт неавторизованного пользователя
