@@ -1,6 +1,7 @@
 import os
 import dsa
 import jwt
+import hashlib
 import datetime
 import subprocess
 from functools import wraps
@@ -17,6 +18,8 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 db = SQLAlchemy(app)
 
 class User(db.Model):
+    __tablename__ = 'users'
+
     id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String, nullable=False)
     last_name = db.Column(db.String, nullable=False)
@@ -26,6 +29,16 @@ class User(db.Model):
     public_key = db.Column(db.String, unique=True, nullable=False)
     private_key = db.Column(db.String, nullable=False)
     role = db.Column(db.String, nullable=False)
+
+class Work(db.Model):
+    __tablename__ = 'works'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    work_name = db.Column(db.String, nullable=False)
+    approved = db.Column(db.String, nullable=False)
+    base_hash = db.Column(db.String, nullable=False)
+    approved_hash = db.Column(db.String, nullable=True)
 
 def jwt_required(func):
     @wraps(func)
@@ -39,6 +52,12 @@ def jwt_required(func):
             abort(401, description='Invalid token')
         return func(*args, **kwargs)
     return wrapper
+
+def calculate_pdf_hash(file_path):
+    with open(file_path, 'rb') as file:
+        content = file.read()
+        hash_object = hashlib.sha256(content)
+        return hash_object.hexdigest()
 
 @app.route('/')
 def main():
@@ -222,21 +241,26 @@ def uploader_file():
         # Загрузка файла 
         filepath = os.path.join(app.config['UPLOAD_FOLDER']+f"/{data['username']}", filename)
         f.save(filepath)
+
+        # Добавление в бд информации о загруженном файле
+        user = User.query.filter_by(username=data['username']).first()
+        new_record = Work(user_id=user.id,
+                          work_name=filename,
+                          approved="No",
+                          base_hash=calculate_pdf_hash(filepath))
+        db.session.add(new_record)
+        db.session.commit()
+
     return 'file uploaded successfully'
 
 @app.route('/works', methods=['GET', 'POST'])
 def works():
-    table_data = [
-        {'name': 'Alice', 'age': 25, 'city': 'New York'},
-        {'name': 'Bob', 'age': 30, 'city': 'Los Angeles'},
-        {'name': 'Charlie', 'age': 35, 'city': 'Chicago'},
+    rows = [
+        {'first_name': 'John', 'last_name': 'Doe', 'department': 'Sales', 'work_name': 'Sale Report', 'id': 1},
+        {'first_name': 'Jane', 'last_name': 'Doe', 'department': 'Marketing', 'work_name': 'Social Media Campaign', 'id': 2},
+        {'first_name': 'Bob', 'last_name': 'Smith', 'department': 'Engineering', 'work_name': 'Product Design', 'id': 3},
     ]
-    return render_template('works.html', table_data=table_data)
-    #if request.method == 'GET':
-    #    return 'Here are the works'
-    #elif request.method == 'POST':
-    #    work_name = request.form['work_name']
-    #    return f'Added work: {work_name}'
+    return render_template('works.html', rows=rows)
 
 if __name__ == '__main__':
     with app.app_context():

@@ -1,17 +1,25 @@
 <table>
     <thead>
         <tr>
-            <th>Name</th>
-            <th>Age</th>
-            <th>City</th>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Department</th>
+            <th>Work Name</th>
+            <th>Action</th>
         </tr>
     </thead>
     <tbody>
-        {% for row in table_data %}
+        {% for row in rows %}
         <tr>
-            <td>{{ row['name'] }}</td>
-            <td>{{ row['age'] }}</td>
-            <td>{{ row['city'] }}</td>
+            <td>{{ row.first_name }}</td>
+            <td>{{ row.last_name }}</td>
+            <td>{{ row.department }}</td>
+            <td>{{ row.work_name }}</td>
+            <td>
+                <form action="{{ url_for('works', work_id=row.id) }}" method="POST">
+                    <button type="submit">Do Work</button>
+                </form>
+            </td>
         </tr>
         {% endfor %}
     </tbody>
