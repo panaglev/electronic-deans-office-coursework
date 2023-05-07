@@ -62,10 +62,23 @@ def calculate_pdf_hash(file_path):
 
 @app.route('/')
 def main():
-    return 'Welcome to the main page!'
+    # Пробуем отловить токен чтобы вывести сообщение с приветствием
+    token = request.cookies.get("token")
+    
+    # Если переловить имя из токена не получится будет написано "Welcome Page"
+    username = "Page"
 
-#@app.route('/approve/<public_key>/<work_name>', methods=['GET'])
-#def approve_work(public_key, work_name):
+    # Проверка наличия токена
+    if token != None:
+        data = jwt.decode(token, 'SECRET', "HS256")
+        username = data['username']
+
+    works = Work.query.all()
+
+    return render_template('index.html',
+                           username=username,
+                           works=works)
+
 @app.route('/approve/<username>/<work_name>', methods=['GET'])
 def approve_work(username, work_name):
     # 0. Проверить юзернейм передаваемый в юрле с тем, что находится в токене
@@ -107,12 +120,16 @@ def register():
         if token != None:
             data = jwt.decode(token, 'SECRET', "HS256")
             user = User.query.filter_by(username=data['username']).first()
-            return make_response(redirect(url_for('profile', user_id=user.id,
-                                    first_name=user.first_name,
-                                    last_name=user.last_name,
-                                    department=user.department,
-                                    public_key=user.public_key,
-                                    role=user.role)))
+            try:
+                return make_response(redirect(url_for('profile', user_id=user.id,
+                                        first_name=user.first_name,
+                                        last_name=user.last_name,
+                                        department=user.department,
+                                        public_key=user.public_key,
+                                        role=user.role)))
+            except AttributeError:
+                return "clean token info"
+                
     # Если запрос пост, то регистрируем пользователя 
     if request.method == 'POST':
         # Получение данных с форм
@@ -179,23 +196,26 @@ def login():
         # Вылавливаем момент с активной сессией
         if token != None:
             data = jwt.decode(token, 'SECRET', "HS256")
-            user = User.query.filter_by(username=data['username']).first()
-            if user.role == "Dickunat":
-                works = Work.query.filter_by(approved="No").all()
-                return make_response(redirect(url_for('profile', user_id=user.id,
-                                    first_name=user.first_name,
-                                    last_name=user.last_name,
-                                    department=user.department,
-                                    public_key=user.public_key,
-                                    role=user.role,
-                                    works=works)))
-            else:
-                return make_response(redirect(url_for('profile', user_id=user.id,
-                                    first_name=user.first_name,
-                                    last_name=user.last_name,
-                                    department=user.department,
-                                    public_key=user.public_key,
-                                    role=user.role)))
+            try:
+                user = User.query.filter_by(username=data['username']).first()
+                if user.role == "Dickunat":
+                    works = Work.query.filter_by(approved="No").all()
+                    return make_response(redirect(url_for('profile', user_id=user.id,
+                                        first_name=user.first_name,
+                                        last_name=user.last_name,
+                                        department=user.department,
+                                        public_key=user.public_key,
+                                        role=user.role,
+                                        works=works)))
+                else:
+                    return make_response(redirect(url_for('profile', user_id=user.id,
+                                        first_name=user.first_name,
+                                        last_name=user.last_name,
+                                        department=user.department,
+                                        public_key=user.public_key,
+                                        role=user.role)))
+            except AttributeError:
+                return "clean token info"
 
     # Если запрос POST, то собираем все данные из форм, проверяем пользователя и создаем ему токен в куке(если все успешно)
     if request.method == 'POST':
