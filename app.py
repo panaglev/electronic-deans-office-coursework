@@ -68,18 +68,25 @@ def main():
 #def approve_work(public_key, work_name):
 @app.route('/approve/<username>/<work_name>', methods=['GET'])
 def approve_work(username, work_name):
-    # 1. Взять из бд пользователей приватный ключ подписывающего
-    #user = User.query.filter_by(public_key=public_key).first()
-    user = User.query.filter_by(username=username).first()
-    # 2. Взять из бд работ хэш работы по ее названию и айди пользователя
-    work = Work.query.filter_by(work_name=work_name).first()
-    # 3. Подписанную строчку положить в таблицу работ и изменить статус на подписано 
-    signature = dsa.sign_message((work.base_hash).encode(), user.private_key)
-    work.approved_hash = signature
-    work.approved = "Yes"
-    db.session.commit()
-    #print(dsa.verify_signature((work.base_hash).encode(), signature, user.public_key))
-    return 'Signed!'
+    # 0. Проверить юзернейм передаваемый в юрле с тем, что находится в токене
+    token = request.cookies.get("token")
+    data = jwt.decode(token, 'SECRET', "HS256")
+    user = User.query.filter_by(username=data['username']).first()
+    if username == user.username:
+        # 1. Взять из бд пользователей приватный ключ подписывающего
+        #user = User.query.filter_by(public_key=public_key).first()
+        user = User.query.filter_by(username=username).first()
+        # 2. Взять из бд работ хэш работы по ее названию и айди пользователя
+        work = Work.query.filter_by(work_name=work_name).first()
+        # 3. Подписанную строчку положить в таблицу работ и изменить статус на подписано 
+        signature = dsa.sign_message((work.base_hash).encode(), user.private_key)
+        work.approved_hash = signature
+        work.approved = "Yes"
+        db.session.commit()
+        #print(dsa.verify_signature((work.base_hash).encode(), signature, user.public_key))
+        return 'Signed!'
+    else: 
+        return "Error, not authorized to sign user"
 
 @app.route('/download/<username>/<path:filename>', methods=['GET'])
 def download_file(username, filename):
@@ -240,23 +247,39 @@ def login():
 
 @app.route('/profile/<user_id>')
 def profile(user_id):
+    token = request.cookies.get("token")
+    data = jwt.decode(token, 'SECRET', "HS256")
+    #user = User.query.filter_by(username=data['username']).first()
     # Получение пользователя по его айди
     user = User.query.filter_by(id=user_id).first()
 
+    # Прогружаем загруженные работы пользователя 
     document = Work.query.filter_by(user_id=user_id).all()
 
-    work = Work.query.filter_by(approved="No").all()
+    if user.username == data['username']:
 
-    # Рендер шаблона и передача в него информации 
-    return render_template('profile.html',
-                           first_name=user.first_name,
-                           last_name=user.last_name,
-                           username=user.username,
-                           department=user.department,
-                           public_key=user.public_key,
-                           role=user.role,
-                           documents=document,
-                           works=work)
+        # Прогружаем работы которые требуют подтверждения
+        work = Work.query.filter_by(approved="No").all()
+
+        # Рендер шаблона и передача в него информации 
+        return render_template('profile.html',
+                               first_name=user.first_name,
+                               last_name=user.last_name,
+                               username=user.username,
+                               department=user.department,
+                               public_key=user.public_key,
+                               role=user.role,
+                               documents=document,
+                               works=work)
+    else:
+        return render_template('profile.html',
+                               first_name=user.first_name,
+                               last_name=user.last_name,
+                               username=user.username,
+                               department=user.department,
+                               public_key=user.public_key,
+                               role=user.role,
+                               documents=document)
 
 @app.route('/upload')
 # Жэвэтэ токен который не пущает на сайт неавторизованного пользователя
