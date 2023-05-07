@@ -79,6 +79,13 @@ def main():
                            username=username,
                            works=works)
 
+@app.route('/logout')
+def logout():
+    # Удаление токена из кук
+    response = make_response(redirect(url_for('main')))
+    response.delete_cookie('token')
+    return response
+
 @app.route('/approve/<username>/<work_name>', methods=['GET'])
 def approve_work(username, work_name):
     # 0. Проверить юзернейм передаваемый в юрле с тем, что находится в токене
