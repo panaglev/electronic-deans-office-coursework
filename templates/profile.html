@@ -26,7 +26,7 @@
             <td>{{ document.base_hash }}</td>
             <td>No</td>
             <td>
-                <a href="{{ url_for('download_file', username=username, filename=document.work_name) }}"
+                <a href="{{ url_for('download_file', user_id=document.user_id, filename=document.work_name) }}"
                     class="btn btn-primary">Download</a>
             </td>
         </tr>
@@ -36,7 +36,7 @@
             <td>{{ document.base_hash }}</td>
             <td>Yes</td>
             <td>
-                <a href="{{ url_for('download_file', username=username, filename=document.work_name) }}"
+                <a href="{{ url_for('download_file', user_id=document.user_id, filename=document.work_name) }}"
                     class="btn btn-primary">Download</a>
             </td>
         </tr>

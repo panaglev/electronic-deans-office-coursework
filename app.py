@@ -18,6 +18,7 @@ app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'downloads')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 db = SQLAlchemy(app)
 
+# Создание таблицы для хранения информцаии о пользователях
 class User(db.Model):
     __tablename__ = 'users'
 
@@ -31,6 +32,7 @@ class User(db.Model):
     private_key = db.Column(db.String, nullable=False)
     role = db.Column(db.String, nullable=False)
 
+# Создание таблицы для хранения информации о загруженных работах
 class Work(db.Model):
     __tablename__ = 'works'
 
@@ -41,6 +43,7 @@ class Work(db.Model):
     base_hash = db.Column(db.String, nullable=False)
     approved_hash = db.Column(db.String, nullable=True)
 
+# Создание декоратора для жэвэтэ токена
 def jwt_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -54,6 +57,7 @@ def jwt_required(func):
         return func(*args, **kwargs)
     return wrapper
 
+# Функция для подсчета sha256 хеша пдф файла
 def calculate_pdf_hash(file_path):
     with open(file_path, 'rb') as file:
         content = file.read()
@@ -62,6 +66,9 @@ def calculate_pdf_hash(file_path):
 
 @app.route('/')
 def main():
+    """
+    Главная страница 
+    """
     # Пробуем отловить токен чтобы вывести сообщение с приветствием
     token = request.cookies.get("token")
     
@@ -73,14 +80,19 @@ def main():
         data = jwt.decode(token, 'SECRET', "HS256")
         username = data['username']
 
+    # Загружаем все работы чтобы отобразить их для скачивания
     works = Work.query.all()
 
+    # Возвращаем страницу
     return render_template('index.html',
                            username=username,
                            works=works)
 
 @app.route('/logout')
 def logout():
+    """
+    Страница для разлогина
+    """
     # Удаление токена из кук
     response = make_response(redirect(url_for('main')))
     response.delete_cookie('token')
@@ -88,13 +100,15 @@ def logout():
 
 @app.route('/approve/<username>/<work_name>', methods=['GET'])
 def approve_work(username, work_name):
+    """
+    Страница для подписи работы
+    """
     # 0. Проверить юзернейм передаваемый в юрле с тем, что находится в токене
     token = request.cookies.get("token")
     data = jwt.decode(token, 'SECRET', "HS256")
     user = User.query.filter_by(username=data['username']).first()
     if username == user.username:
         # 1. Взять из бд пользователей приватный ключ подписывающего
-        #user = User.query.filter_by(public_key=public_key).first()
         user = User.query.filter_by(username=username).first()
         # 2. Взять из бд работ хэш работы по ее названию и айди пользователя
         work = Work.query.filter_by(work_name=work_name).first()
@@ -103,17 +117,24 @@ def approve_work(username, work_name):
         work.approved_hash = signature
         work.approved = "Yes"
         db.session.commit()
-        #print(dsa.verify_signature((work.base_hash).encode(), signature, user.public_key))
         return 'Signed!'
     else: 
         return "Error, not authorized to sign user"
 
-@app.route('/download/<username>/<path:filename>', methods=['GET'])
-def download_file(username, filename):
-    return send_nudes("downloads/"+username+"/"+filename, as_attachment=True)
+# !!! Переделать, вместо юзернейма сделать айдишник(-> поменять генерацию жэвэтэ токена) и поменять страницы хэтээмл
+@app.route('/download/<user_id>/<path:filename>', methods=['GET'])
+def download_file(user_id, filename):
+    """
+    Страница для скачивания файла 
+    """
+    user = User.query.filter_by(id=user_id).first()
+    return send_nudes("downloads/"+user.username+"/"+filename, as_attachment=True)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    """
+    Страница для регистрации пользователя
+    """
     # При переходе на страницу регистрации надо посмотреть по какому методу 
     # Был произведен заход на страницу
     # Если GET, то проверяем авторизован ли пользователь
@@ -167,6 +188,7 @@ def register():
         db.session.commit()
 
         # Костыль, может можно было сделать лучше, но я не гений, не я гений, но не в этом
+        # Костыль потому, что я не могу обратиться к тому юзеру выше. Возможно после коммита как-то сессия обновляетя
         user = User.query.filter_by(username=username).first()
 
         # Создание нагрузки которая войдет в жэвэтэ токен 
@@ -193,6 +215,9 @@ def register():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    """
+    Страница для авторизации пользователя
+    """
     # Если запрос GET, то надо узнать, авторизирован ли пользователь или нет
     # Если авторизирован, то кинуть на домашнюю страницу
     # В противном случае показать страницу авторизации 
@@ -205,6 +230,8 @@ def login():
             data = jwt.decode(token, 'SECRET', "HS256")
             try:
                 user = User.query.filter_by(username=data['username']).first()
+                # Проверяем какая роль у пользователя, если он является представителем деканата, то генерируем страницу с дополнительным параметром - 
+                # Работы которые требуют подписи
                 if user.role == "Dickunat":
                     works = Work.query.filter_by(approved="No").all()
                     return make_response(redirect(url_for('profile', user_id=user.id,
@@ -221,6 +248,7 @@ def login():
                                         department=user.department,
                                         public_key=user.public_key,
                                         role=user.role)))
+            # Если токен будет установлен с прошлой сессии(удалили дб, например), то будет ошибка 
             except AttributeError:
                 return "clean token info"
 
@@ -250,6 +278,7 @@ def login():
         # Создание токена
         token = jwt.encode(payload, secret_key, algorithm='HS256')
 
+        # Проверка пользовательской роли
         if user.role == "Dickunat":
             works = Work.query.filter_by(approved="No").all()
             response = make_response(redirect(url_for('profile', user_id=user.id,

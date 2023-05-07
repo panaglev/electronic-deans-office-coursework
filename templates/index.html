@@ -19,7 +19,7 @@
             <td>{{ work.approved }}</td>
             <td>{{ work.base_hash }}</td>
             <td>
-                <a href="{{ url_for('download_file', username=username, filename=work.work_name) }}"
+                <a href="{{ url_for('download_file', user_id=work.user_id, filename=work.work_name) }}"
                     class="btn btn-primary">Download</a>
             </td>
         </tr>
