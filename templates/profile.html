@@ -1,85 +1,75 @@
-<!DOCTYPE html>
-<html>
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <title>Personal Profile</title>
-</head>
+{% block content %}
+<h1>Personal Profile</h1>
+<p><strong>First Name:</strong> {{ first_name }}</p>
+<p><strong>Last Name:</strong> {{ last_name }}</p>
+<p><strong>Department:</strong> {{ department }}</p>
+<p><strong>Public Key:</strong> {{ public_key }}</p>
+<p><strong>Role:</strong> {{ role }}</p>
 
-<body>
-    <h1>Personal Profile</h1>
-    <p><strong>First Name:</strong> {{ first_name }}</p>
-    <p><strong>Last Name:</strong> {{ last_name }}</p>
-    <p><strong>Department:</strong> {{ department }}</p>
-    <p><strong>Public Key:</strong> {{ public_key }}</p>
-    <p><strong>Role:</strong> {{ role }}</p>
+{% if documents %}
+<table>
+    <thead>
+        <tr>
+            <th>Work name</th>
+            <th>Base hash</th>
+            <th>Approved</th>
+            <th>Download</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for document in documents %}
+        {% if document.approved == 'No' %}
+        <tr>
+            <td>{{ document.work_name }}</td>
+            <td>{{ document.base_hash }}</td>
+            <td>No</td>
+            <td>
+                <a href="{{ url_for('download_file', username=username, filename=document.work_name) }}"
+                    class="btn btn-primary">Download</a>
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td>{{ document.work_name }}</td>
+            <td>{{ document.base_hash }}</td>
+            <td>Yes</td>
+            <td>
+                <a href="{{ url_for('download_file', username=username, filename=document.work_name) }}"
+                    class="btn btn-primary">Download</a>
+            </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No approved documents found.</p>
+{% endif %}
 
-    {% if documents %}
-    <table>
-        <thead>
-            <tr>
-                <th>Work name</th>
-                <th>Base hash</th>
-                <th>Approved</th>
-                <th>Download</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for document in documents %}
-            {% if document.approved == 'No' %}
-            <tr>
-                <td>{{ document.work_name }}</td>
-                <td>{{ document.base_hash }}</td>
-                <td>No</td>
-                <td>
-                    <a href="{{ url_for('download_file', username=username, filename=document.work_name) }}"
-                        class="btn btn-primary">Download</a>
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td>{{ document.work_name }}</td>
-                <td>{{ document.base_hash }}</td>
-                <td>Yes</td>
-                <td>
-                    <a href="{{ url_for('download_file', username=username, filename=document.work_name) }}"
-                        class="btn btn-primary">Download</a>
-                </td>
-            </tr>
-            {% endif %}
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p>No approved documents found.</p>
-    {% endif %}
-
-    {% if role == "Dickunat" %}
-    <table class="table table-hover">
-        <thead>
-            <tr>
-                <th>User ID</th>
-                <th>Work Name</th>
-                <th>Base Hash</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for work in works %}
-            <tr>
-                <td>{{ work.user_id }}</td>
-                <td>{{ work.work_name }}</td>
-                <td>{{ work.base_hash }}</td>
-                <td>
-                    <a href="{{ url_for('approve_work', username=username, work_name=work.work_name) }}"
-                        class="btn btn-primary">Approve</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% endif %}
-
-
-</body>
-
-</html>
+{% if role == "Dickunat" %}
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th>User ID</th>
+            <th>Work Name</th>
+            <th>Base Hash</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for work in works %}
+        <tr>
+            <td>{{ work.user_id }}</td>
+            <td>{{ work.work_name }}</td>
+            <td>{{ work.base_hash }}</td>
+            <td>
+                <a href="{{ url_for('approve_work', username=username, work_name=work.work_name) }}"
+                    class="btn btn-primary">Approve</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

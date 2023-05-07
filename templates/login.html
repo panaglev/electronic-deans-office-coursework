@@ -1,3 +1,6 @@
+{% extends "base.html" %}
+
+{% block content %}
 <form method="POST" action="{{ url_for('login') }}">
     <label>Username:</label>
     <input type="text" name="username" required>
@@ -7,3 +10,4 @@
     <br>
     <input type="submit" value="Login">
 </form>
+{% endblock %}

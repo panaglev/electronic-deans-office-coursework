@@ -345,15 +345,6 @@ def uploader_file():
 
     return 'file uploaded successfully'
 
-@app.route('/works', methods=['GET', 'POST'])
-def works():
-    rows = [
-        {'first_name': 'John', 'last_name': 'Doe', 'department': 'Sales', 'work_name': 'Sale Report', 'id': 1},
-        {'first_name': 'Jane', 'last_name': 'Doe', 'department': 'Marketing', 'work_name': 'Social Media Campaign', 'id': 2},
-        {'first_name': 'Bob', 'last_name': 'Smith', 'department': 'Engineering', 'work_name': 'Product Design', 'id': 3},
-    ]
-    return render_template('works.html', rows=rows)
-
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()

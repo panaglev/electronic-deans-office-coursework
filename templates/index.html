@@ -1,37 +1,29 @@
-<!DOCTYPE html>
-<html>
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <title>Welcome {{ username }}</title>
-</head>
-
-<body>
-    <table>
-        <thead>
-            <tr>
-                <th>Owner id</th>
-                <th>Work name</th>
-                <th>Approved</th>
-                <th>Base hash</th>
-                <th>Download</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for work in works %}
-            <tr>
-                <td>{{ work.user_id }}</td>
-                <td>{{ work.work_name }}</td>
-                <td>{{ work.approved }}</td>
-                <td>{{ work.base_hash }}</td>
-                <td>
-                    <a href="{{ url_for('download_file', username=username, filename=work.work_name) }}"
-                        class="btn btn-primary">Download</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</body>
-
-</html>
+{% block content %}
+<table>
+    <thead>
+        <tr>
+            <th>Owner id</th>
+            <th>Work name</th>
+            <th>Approved</th>
+            <th>Base hash</th>
+            <th>Download</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for work in works %}
+        <tr>
+            <td>{{ work.user_id }}</td>
+            <td>{{ work.work_name }}</td>
+            <td>{{ work.approved }}</td>
+            <td>{{ work.base_hash }}</td>
+            <td>
+                <a href="{{ url_for('download_file', username=username, filename=work.work_name) }}"
+                    class="btn btn-primary">Download</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
