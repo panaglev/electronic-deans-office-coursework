@@ -108,16 +108,18 @@ def approve_work(username, work_name):
     data = jwt.decode(token, 'SECRET', "HS256")
     user = User.query.filter_by(username=data['username']).first()
     if username == user.username:
-        # 1. Взять из бд пользователей приватный ключ подписывающего
-        user = User.query.filter_by(username=username).first()
-        # 2. Взять из бд работ хэш работы по ее названию и айди пользователя
-        work = Work.query.filter_by(work_name=work_name).first()
-        # 3. Подписанную строчку положить в таблицу работ и изменить статус на подписано 
-        signature = dsa.sign_message((work.base_hash).encode(), user.private_key)
-        work.approved_hash = signature
-        work.approved = "Yes"
-        db.session.commit()
-        return 'Signed!'
+        if user.role == "Dickunat":
+            # 1. Взять из бд пользователей приватный ключ подписывающего
+            user = User.query.filter_by(username=username).first()
+            # 2. Взять из бд работ хэш работы по ее названию и айди пользователя
+            work = Work.query.filter_by(work_name=work_name).first()
+            # 3. Подписанную строчку положить в таблицу работ и изменить статус на подписано 
+            signature = dsa.sign_message((work.base_hash).encode(), user.private_key)
+            work.approved_hash = signature
+            work.approved = "Yes"
+            db.session.commit()
+            return 'Signed!'
+        return "Error, not authorized to sign user"
     else: 
         return "Error, not authorized to sign user"
 
@@ -173,7 +175,7 @@ def register():
         # Проверка зарегистрирован ли уже пользователь
         user = User.query.filter_by(username=username).first()
         if user:
-            return render_template('register.html', error='This username already registered')
+            return "This user already exists" #render_template('register.html', error='This username already registered')
 
        # Создание нового пользователя и добавление его в базу данных
         new_user = User(first_name=first_name,
